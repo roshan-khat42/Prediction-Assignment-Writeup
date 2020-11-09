@@ -1,0 +1,159 @@
+---
+title: "Prediction Assignment"
+author: "Roshan"
+date: "11/09/2020"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library('caret')
+```
+## Background
+
+Using devices such as Jawbone Up, Nike FuelBand, and Fitbit it is now possible to collect a large amount of data about personal activity relatively inexpensively. These type of devices are part of the quantified self movement - a group of enthusiasts who take measurements about themselves regularly to improve their health, to find patterns in their behavior, or because they are tech geeks. One thing that people regularly do is quantify how much of a particular activity they do, but they rarely quantify how well they do it. In this project, your goal will be to use data from accelerometers on the belt, forearm, arm, and dumbell of 6 participants. They were asked to perform barbell lifts correctly and incorrectly in 5 different ways. More information is available from the website here: http://groupware.les.inf.puc-rio.br/har (see the section on the Weight Lifting Exercise Dataset).
+
+## Data
+
+The training data for this project are available here: [https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv]
+
+The test data are available here: [https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv]
+
+The data for this project come from this source: [http://groupware.les.inf.puc-rio.br/har]. If you use the document you create for this class for any purpose please cite them as they have been very generous in allowing their data to be used for this kind of assignment.
+
+
+## What you should submit
+The goal of your project is to predict the manner in which they did the exercise. This is the “classe” variable in the training set. You may use any of the other variables to predict with. You should create a report describing how you built your model, how you used cross validation, what you think the expected out of sample error is, and why you made the choices you did. You will also use your prediction model to predict 20 different test cases.
+
+Your submission should consist of a link to a Github repo with your R markdown and compiled HTML file describing your analysis. Please constrain the text of the writeup to < 2000 words and the number of figures to be less than 5. It will make it easier for the graders if you submit a repo with a gh-pages branch so the HTML page can be viewed online (and you always want to make it easy on graders :-). You should also apply your machine learning algorithm to the 20 test cases available in the test data above. Please submit your predictions in appropriate format to the programming assignment for automated grading. See the programming assignment for additional details.
+
+
+
+
+## Loading Dataset
+
+
+```{r}
+train_data <- read.csv("https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv", na.strings=c("NA","#DIV/0!", ""))
+
+test_data <- read.csv("https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv", na.strings=c("NA","#DIV/0!", ""))
+```
+
+
+## Data Cleaning
+```{r}
+dim(train_data)
+dim(test_data)
+
+train.y <- train_data$classe
+train_data$user_name <- NULL
+train_data$raw_timestamp_part_1 = NULL
+train_data$raw_timestamp_part_2 = NULL
+train_data$cvtd_timestamp = NULL
+train_data$num_window = NULL
+train_data$new_window <- NULL
+train_data$classe <- NULL
+train_data$X <- NULL
+train_data$cvtd_timestamp <- NULL
+
+test_data$user_name <- NULL
+test_data$raw_timestamp_part_1 = NULL
+test_data$raw_timestamp_part_2 = NULL
+test_data$cvtd_timestamp = NULL
+test_data$num_window = NULL
+test_data$new_window <- NULL
+test_data$classe <- NULL
+test_data$cvtd_timestamp <- NULL
+test_data$X <- NULL
+
+train_data <- train_data[, colSums(is.na(train_data)) == 0]
+test_data <- test_data[, colSums(is.na(test_data)) == 0]
+
+```
+
+Removing less important features, which has almost no effect or 
+contains only single or null values.
+
+Removing highly correlated features.
+
+## Prediction Analysis
+
+
+```{r}
+train_corr <- cor(train_data, use = "pairwise.complete.obs")
+high_corr <- findCorrelation(train_corr, cutoff=0.3)
+high_corr <- sort(high_corr)
+train.cleaned <- train_data[,-c(high_corr)]
+test.cleaned <- test_data[,-c(high_corr)]
+```
+
+```{r}
+
+index <- createDataPartition(y=train.y, p=0.75, list=FALSE)
+train.X <- train.cleaned[index, ]
+train.lbl <- train.y[index]
+
+test.X <- train.cleaned[-index, ]
+test.lbl <- train.y[-index]
+
+metric <- "Accuracy"
+df <- train.X
+df$y <- train.lbl
+
+train_control <- trainControl(method="repeatedcv", 
+                              number=10, repeats=3, 
+                              search="grid")
+model <- train(y~., data = df,  
+                       method="rpart", 
+                       metric=metric, 
+                       trControl=train_control)
+print(model)
+```
+```{r}
+feature.importance <- varImp(model, scale = FALSE)
+feature.importance
+```
+
+```{r}
+plot(feature.importance, top = 10)
+```
+
+```{r}
+classes.predicted = predict(model, test.X)
+```
+
+```{r}
+confusionMatrix(as.factor(test.lbl), classes.predicted)
+```
+
+```{r}
+test.predicted = predict(model, test.cleaned)
+matrix(test.predicted, nrow = 1, ncol = 20)
+```
+
+```{r}
+train_control <- trainControl(method="repeatedcv", 
+                              number=10, repeats=3, 
+                              search="grid")
+model <- train(y~., data = df,  
+                       method="knn", 
+                       metric=metric, 
+                       trControl=train_control)
+```
+
+```{r}
+classes.predicted = predict(model, test.X)
+confusionMatrix(as.factor(test.lbl), classes.predicted)
+```
+
+
+## Conclusion
+A set of unused features are removed such that user_name, raw_timestamp_part_1,
+raw_timestamp_part_2, cvtd_timestamp, num_window, new_window and cvtd_timestamp.
+Then highly correlated features are removed. There are 16 features left with 
+the training data set. Two models are fit ie. decision tree and k-nearst neighbour
+classifier. The decision tree achieves about 40% accuracy, however, the k-nn
+achieves about 76% accuracy.
+
