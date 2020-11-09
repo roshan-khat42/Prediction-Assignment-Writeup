@@ -3,8 +3,9 @@ title: "Prediction Assignment"
 author: "Roshan"
 date: "11/09/2020"
 output:
-  pdf_document: default
   html_document: default
+  pdf_document: default
+  word_document: default
 ---
 
 ```{r setup, include=FALSE}
@@ -128,10 +129,7 @@ classes.predicted = predict(model, test.X)
 confusionMatrix(as.factor(test.lbl), classes.predicted)
 ```
 
-```{r}
-test.predicted = predict(model, test.cleaned)
-matrix(test.predicted, nrow = 1, ncol = 20)
-```
+
 
 ```{r}
 train_control <- trainControl(method="repeatedcv", 
@@ -147,6 +145,7 @@ model <- train(y~., data = df,
 classes.predicted = predict(model, test.X)
 confusionMatrix(as.factor(test.lbl), classes.predicted)
 ```
+
 
 
 ## Conclusion
